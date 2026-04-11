@@ -27,8 +27,12 @@ public class BookingController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         // Validate event exists
-        eventRepo.findById(booking.getEventId())
+        Event event = eventRepo.findById(booking.getEventId())
                 .orElseThrow(() -> new RuntimeException("Event not found"));
+
+        if (!"published".equalsIgnoreCase(event.getStatus())) {
+            throw new RuntimeException("Tickets can only be booked for published events");
+        }
 
         // Quantity and cost should be positive
         if (booking.getQuantity() <= 0) throw new RuntimeException("Quantity must be positive");

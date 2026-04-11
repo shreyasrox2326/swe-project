@@ -21,8 +21,12 @@ public class TicketCategoryController {
     public TicketCategory create(@RequestBody TicketCategory category) {
 
         // Validate event exists
-        eventRepo.findById(category.getEventId())
+        Event event = eventRepo.findById(category.getEventId())
                 .orElseThrow(() -> new RuntimeException("Event not found"));
+
+        if ("deleted".equalsIgnoreCase(event.getStatus())) {
+            throw new RuntimeException("Cannot manage ticket categories for a deleted event");
+        }
 
         // Validate quantities and price
         if (category.getTotalQty() <= 0) throw new RuntimeException("Total quantity must be positive");

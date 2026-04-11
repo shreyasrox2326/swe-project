@@ -1,6 +1,8 @@
 package com.example.demo;
 
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Locale;
 import java.util.List;
 
 @RestController
@@ -34,6 +36,16 @@ public class EventController {
             throw new RuntimeException("End time must be after start time");
         }
 
+        if (event.getCapacity() == null || event.getCapacity() <= 0) {
+            throw new RuntimeException("Capacity must be positive");
+        }
+
+        String status = event.getStatus() == null ? "published" : event.getStatus().trim().toLowerCase(Locale.ROOT);
+        if (!status.equals("published") && !status.equals("cancelled") && !status.equals("deleted")) {
+            throw new RuntimeException("Unsupported event status");
+        }
+        event.setStatus(status);
+
         return repo.save(event);
     }
 
@@ -52,7 +64,11 @@ public class EventController {
 
     // DELETE
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable String id) {
-        repo.deleteById(id);
+    public Event delete(@PathVariable String id) {
+        Event event = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Event not found"));
+
+        event.setStatus("deleted");
+        return repo.save(event);
     }
 }
