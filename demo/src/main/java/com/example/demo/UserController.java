@@ -62,15 +62,19 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         User user = userRepository.findByEmailIgnoreCase(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+                .orElse(null);
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword_hash())) {
-            throw new RuntimeException("Invalid email or password");
+        if (user == null) {
+            return ResponseEntity.status(401).body("Invalid email or password.");
         }
 
-        return new LoginResponse(user);
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword_hash())) {
+            return ResponseEntity.status(401).body("Invalid email or password.");
+        }
+
+        return ResponseEntity.ok(new LoginResponse(user));
     }
 
     // UPDATE
