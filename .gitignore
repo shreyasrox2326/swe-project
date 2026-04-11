@@ -1,0 +1,27 @@
+# Maven build output
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Logs
+*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Build artifacts
+*.jar
+*.war
+*.ear
+
+# Env files
+.env
+
+# Your existing stuff (KEEP)
+demo.zip
+dem0/
