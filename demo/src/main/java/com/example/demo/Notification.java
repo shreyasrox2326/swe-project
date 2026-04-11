@@ -20,8 +20,14 @@ public class Notification {
     @Column(name = "sent_at", nullable = false)
     private Timestamp sentAt = new Timestamp(System.currentTimeMillis());
 
-    @Column(name = "event_id", nullable = false)
-    private String eventId; // linked event
+    @Column(name = "event_id")
+    private String eventId;
+
+    @Column(name = "user_id")
+    private String userId;
+
+    @Column(name = "read_at")
+    private Timestamp readAt;
 
     // Getters and setters
     public String getNotificationId() { return notificationId; }
@@ -38,4 +44,10 @@ public class Notification {
 
     public String getEventId() { return eventId; }
     public void setEventId(String eventId) { this.eventId = eventId; }
+
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
+
+    public Timestamp getReadAt() { return readAt; }
+    public void setReadAt(Timestamp readAt) { this.readAt = readAt; }
 }
