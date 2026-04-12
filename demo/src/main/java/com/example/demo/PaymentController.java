@@ -36,8 +36,8 @@ public class PaymentController {
         }
 
         // Basic validations
-        if (payment.getAmount().compareTo(java.math.BigDecimal.ZERO) <= 0)
-            throw new RuntimeException("Amount must be positive");
+        if (payment.getAmount().compareTo(java.math.BigDecimal.ZERO) < 0)
+            throw new RuntimeException("Amount must be zero or greater");
 
         if (payment.getMethod() == null || payment.getMethod().isEmpty())
             throw new RuntimeException("Payment method required");

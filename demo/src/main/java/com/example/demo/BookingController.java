@@ -36,8 +36,8 @@ public class BookingController {
 
         // Quantity and cost should be positive
         if (booking.getQuantity() <= 0) throw new RuntimeException("Quantity must be positive");
-        if (booking.getTotalCost().compareTo(java.math.BigDecimal.ZERO) <= 0)
-            throw new RuntimeException("Total cost must be positive");
+        if (booking.getTotalCost().compareTo(java.math.BigDecimal.ZERO) < 0)
+            throw new RuntimeException("Total cost must be zero or greater");
 
         return bookingRepo.save(booking);
     }

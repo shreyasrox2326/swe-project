@@ -32,8 +32,8 @@ public class TicketCategoryController {
         if (category.getTotalQty() <= 0) throw new RuntimeException("Total quantity must be positive");
         if (category.getAvailableQty() < 0 || category.getAvailableQty() > category.getTotalQty())
             throw new RuntimeException("Invalid available quantity");
-        if (category.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0)
-            throw new RuntimeException("Price must be positive");
+        if (category.getPrice().compareTo(java.math.BigDecimal.ZERO) < 0)
+            throw new RuntimeException("Price must be zero or greater");
 
         return categoryRepo.save(category);
     }

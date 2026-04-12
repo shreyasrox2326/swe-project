@@ -1,6 +1,7 @@
 package com.example.demo;
 
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -14,15 +15,18 @@ public class StaffEventAssignmentController {
     private final StaffEventAssignmentRepository assignmentRepo;
     private final UserRepository userRepo;
     private final EventRepository eventRepo;
+    private final InternalTicketService internalTicketService;
 
     public StaffEventAssignmentController(
             StaffEventAssignmentRepository assignmentRepo,
             UserRepository userRepo,
-            EventRepository eventRepo
+            EventRepository eventRepo,
+            InternalTicketService internalTicketService
     ) {
         this.assignmentRepo = assignmentRepo;
         this.userRepo = userRepo;
         this.eventRepo = eventRepo;
+        this.internalTicketService = internalTicketService;
     }
 
     @GetMapping
@@ -41,6 +45,7 @@ public class StaffEventAssignmentController {
     }
 
     @PostMapping
+    @Transactional
     public StaffEventAssignment create(@RequestBody StaffEventAssignment assignment) {
         User staffUser = userRepo.findById(assignment.getStaffUserId())
                 .orElseThrow(() -> new RuntimeException("Staff user not found"));
@@ -57,7 +62,15 @@ public class StaffEventAssignmentController {
         if (assignment.getAssignedAt() == null) {
             assignment.setAssignedAt(new Timestamp(System.currentTimeMillis()));
         }
-        return assignmentRepo.save(assignment);
+        StaffEventAssignment saved = assignmentRepo.save(assignment);
+        internalTicketService.issueInternalTickets(
+                assignment.getEventId(),
+                assignment.getStaffUserId(),
+                "Staff",
+                1,
+                assignment.getAssignedByUserId()
+        );
+        return saved;
     }
 
     @DeleteMapping("/{assignmentId}")

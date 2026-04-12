@@ -342,6 +342,15 @@ public class CorporateBookingRequestController {
         paymentRepo.save(payment);
 
         for (CorporateBookingRequestItem item : items) {
+            TicketCategory category = categoryRepo.findById(item.getCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Ticket category not found"));
+
+            // Inventory was already reserved during approval. Add that held quantity back
+            // before inserting tickets so the existing ticket insert trigger can consume it
+            // into real sold tickets without driving available_qty below zero.
+            category.setAvailableQty(category.getAvailableQty() + item.getReservedQty());
+            categoryRepo.save(category);
+
             for (int index = 0; index < item.getReservedQty(); index++) {
                 Ticket ticket = new Ticket();
                 String ticketId = UUID.randomUUID().toString();
