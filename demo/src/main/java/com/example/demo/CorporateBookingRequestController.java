@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -154,10 +155,26 @@ public class CorporateBookingRequestController {
         if (payload.getItems() == null || payload.getItems().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Approved ticket breakdown is required");
         }
+        if (payload.getExpiresAt() == null || payload.getExpiresAt().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Offer deadline is required");
+        }
 
         List<CorporateBookingRequestItem> existingItems = itemRepo.findByRequestId(requestId);
         BigDecimal offeredTotal = BigDecimal.ZERO;
         int approvedTotalQty = 0;
+        LocalDateTime expiresAt;
+        try {
+            expiresAt = LocalDateTime.parse(payload.getExpiresAt()).truncatedTo(ChronoUnit.MINUTES);
+        } catch (Exception exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Offer deadline is invalid");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (!expiresAt.isAfter(now)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Offer deadline must be in the future");
+        }
+        if (ChronoUnit.MINUTES.between(now, expiresAt) < 15) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Offer deadline must be at least 15 minutes from now");
+        }
 
         for (CorporateRequestItemInput approvedItem : payload.getItems()) {
             CorporateBookingRequestItem item = existingItems.stream()
@@ -200,7 +217,7 @@ public class CorporateBookingRequestController {
         request.setStatus("approved_pending_payment");
         request.setApprovedAt(new Timestamp(System.currentTimeMillis()));
         request.setDecisionAt(new Timestamp(System.currentTimeMillis()));
-        request.setExpiresAt(Timestamp.valueOf(LocalDateTime.parse(payload.getExpiresAt())));
+        request.setExpiresAt(Timestamp.valueOf(expiresAt));
         requestRepo.save(request);
 
         createDirectNotification(
@@ -325,12 +342,6 @@ public class CorporateBookingRequestController {
         paymentRepo.save(payment);
 
         for (CorporateBookingRequestItem item : items) {
-            TicketCategory category = categoryRepo.findById(item.getCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Ticket category not found"));
-
-            category.setAvailableQty(category.getAvailableQty() + item.getReservedQty());
-            categoryRepo.save(category);
-
             for (int index = 0; index < item.getReservedQty(); index++) {
                 Ticket ticket = new Ticket();
                 String ticketId = UUID.randomUUID().toString();
