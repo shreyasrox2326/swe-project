@@ -335,7 +335,7 @@ public class CorporateBookingRequestController {
                 Ticket ticket = new Ticket();
                 String ticketId = UUID.randomUUID().toString();
                 ticket.setTicketId(ticketId);
-                ticket.setQrCode("{\"qrCode\":\"EMTS-" + ticketId + "\",\"ticketId\":\"" + ticketId + "\"}");
+                ticket.setQrCode(UUID.randomUUID().toString());
                 ticket.setCategoryId(item.getCategoryId());
                 ticket.setBookingId(booking.getBookingId());
                 ticket.setStatus(TicketStatus.booked);
