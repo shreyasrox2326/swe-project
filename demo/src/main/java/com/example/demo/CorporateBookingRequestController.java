@@ -1,6 +1,8 @@
 package com.example.demo;
 
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -79,33 +81,33 @@ public class CorporateBookingRequestController {
     @Transactional
     public CorporateBookingRequestView create(@RequestBody CreateCorporateBookingRequest payload) {
         if (payload.getItems() == null || payload.getItems().isEmpty()) {
-            throw new RuntimeException("At least one ticket category is required.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one ticket category is required.");
         }
 
         corporateRepo.findById(payload.getCorporateUserId())
-                .orElseThrow(() -> new RuntimeException("Corporate profile not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Corporate profile not found"));
 
         Event event = eventRepo.findById(payload.getEventId())
-                .orElseThrow(() -> new RuntimeException("Event not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found"));
         if (!"published".equalsIgnoreCase(event.getStatus())) {
-            throw new RuntimeException("Corporate requests can only be created for published events");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Corporate requests can only be created for published events");
         }
 
         organizerRepo.findById(event.getOrganizerId())
-                .orElseThrow(() -> new RuntimeException("Organizer profile not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Organizer profile not found"));
 
         int totalQuantity = 0;
         for (CorporateRequestItemInput itemInput : payload.getItems()) {
             TicketCategory category = categoryRepo.findById(itemInput.getCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Ticket category not found"));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ticket category not found"));
             if (!category.getEventId().equals(payload.getEventId())) {
-                throw new RuntimeException("Ticket category does not belong to the selected event");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ticket category does not belong to the selected event");
             }
             if (itemInput.getQuantity() == null || itemInput.getQuantity() <= 0) {
-                throw new RuntimeException("Requested quantity must be positive");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requested quantity must be positive");
             }
             if (itemInput.getQuantity() > category.getAvailableQty()) {
-                throw new RuntimeException("Requested quantity exceeds current available inventory");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requested quantity exceeds current available inventory");
             }
             totalQuantity += itemInput.getQuantity();
         }
@@ -147,10 +149,10 @@ public class CorporateBookingRequestController {
                 .orElseThrow(() -> new RuntimeException("Corporate booking request not found"));
 
         if (!"submitted".equalsIgnoreCase(request.getStatus())) {
-            throw new RuntimeException("Only submitted requests can be approved");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only submitted requests can be approved");
         }
         if (payload.getItems() == null || payload.getItems().isEmpty()) {
-            throw new RuntimeException("Approved ticket breakdown is required");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Approved ticket breakdown is required");
         }
 
         List<CorporateBookingRequestItem> existingItems = itemRepo.findByRequestId(requestId);
@@ -161,23 +163,23 @@ public class CorporateBookingRequestController {
             CorporateBookingRequestItem item = existingItems.stream()
                     .filter(entry -> entry.getCategoryId().equals(approvedItem.getCategoryId()))
                     .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Approved category does not exist in the request"));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Approved category does not exist in the request"));
 
             TicketCategory category = categoryRepo.findById(item.getCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Ticket category not found"));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ticket category not found"));
 
             int approvedQty = approvedItem.getQuantity() == null ? 0 : approvedItem.getQuantity();
             if (approvedQty <= 0) {
-                throw new RuntimeException("Approved quantity must be positive");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Approved quantity must be positive");
             }
             if (approvedQty > item.getRequestedQty()) {
-                throw new RuntimeException("Approved quantity cannot exceed requested quantity");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Approved quantity cannot exceed requested quantity");
             }
             if (approvedQty > category.getAvailableQty()) {
-                throw new RuntimeException("Approved quantity exceeds currently available inventory");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Approved quantity exceeds currently available inventory");
             }
             if (approvedItem.getOfferedUnitPrice() == null || approvedItem.getOfferedUnitPrice().compareTo(BigDecimal.ZERO) < 0) {
-                throw new RuntimeException("Offered unit price must be zero or positive");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Offered unit price must be zero or positive");
             }
 
             category.setAvailableQty(category.getAvailableQty() - approvedQty);
@@ -218,7 +220,7 @@ public class CorporateBookingRequestController {
                 .orElseThrow(() -> new RuntimeException("Corporate booking request not found"));
 
         if (!"submitted".equalsIgnoreCase(request.getStatus())) {
-            throw new RuntimeException("Only submitted requests can be rejected");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only submitted requests can be rejected");
         }
 
         request.setStatus("rejected");
@@ -267,7 +269,7 @@ public class CorporateBookingRequestController {
                 .orElseThrow(() -> new RuntimeException("Corporate booking request not found"));
 
         if (!"approved_pending_payment".equalsIgnoreCase(request.getStatus())) {
-            throw new RuntimeException("Only approved pending payment requests can expire");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only approved pending payment requests can expire");
         }
 
         releaseReservedInventory(requestId);
@@ -293,10 +295,10 @@ public class CorporateBookingRequestController {
                 .orElseThrow(() -> new RuntimeException("Corporate booking request not found"));
 
         if (!"approved_pending_payment".equalsIgnoreCase(request.getStatus())) {
-            throw new RuntimeException("This request is not ready for payment");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This request is not ready for payment");
         }
         if (request.getExpiresAt() == null || request.getExpiresAt().before(new Timestamp(System.currentTimeMillis()))) {
-            throw new RuntimeException("This payment window has expired");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This payment window has expired");
         }
 
         List<CorporateBookingRequestItem> items = itemRepo.findByRequestId(requestId);
@@ -386,6 +388,7 @@ public class CorporateBookingRequestController {
         notification.setNotificationId(UUID.randomUUID().toString());
         notification.setType(type);
         notification.setMessage(message);
+        notification.setSentAt(new Timestamp(System.currentTimeMillis()));
         notification.setEventId(eventId);
         notification.setUserId(userId);
         notification.setAudienceScope("DIRECT");

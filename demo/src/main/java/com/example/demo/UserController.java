@@ -5,6 +5,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.sql.Timestamp;
 import java.util.UUID;
 
 @RestController
@@ -101,6 +102,7 @@ public class UserController {
                         notification.setNotificationId(UUID.randomUUID().toString());
                         notification.setType("role_assignment");
                         notification.setMessage("Your account role has been updated to " + savedUser.getType().name() + ".");
+                        notification.setSentAt(new Timestamp(System.currentTimeMillis()));
                         notification.setUserId(savedUser.getUser_id());
                         notification.setAudienceScope("DIRECT");
                         notification.setMetadata("{}");
