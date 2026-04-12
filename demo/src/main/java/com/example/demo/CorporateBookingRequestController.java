@@ -349,7 +349,7 @@ public class CorporateBookingRequestController {
             // before inserting tickets so the existing ticket insert trigger can consume it
             // into real sold tickets without driving available_qty below zero.
             category.setAvailableQty(category.getAvailableQty() + item.getReservedQty());
-            categoryRepo.save(category);
+            categoryRepo.saveAndFlush(category);
 
             for (int index = 0; index < item.getReservedQty(); index++) {
                 Ticket ticket = new Ticket();
