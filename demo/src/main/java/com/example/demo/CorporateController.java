@@ -1,6 +1,7 @@
 package com.example.demo;
 
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -21,6 +22,12 @@ public class CorporateController {
         return repo.findAll();
     }
 
+    @GetMapping("/{userId}")
+    public Corporate getByUserId(@PathVariable String userId) {
+        return repo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Corporate profile not found"));
+    }
+
     @PostMapping
     public Corporate create(@RequestBody Corporate corporate) {
 
@@ -32,5 +39,21 @@ public class CorporateController {
   }
 
         return repo.save(corporate);
+    }
+
+    @PutMapping("/{userId}")
+    public Corporate upsert(@PathVariable String userId, @RequestBody Corporate corporate) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getType() != UserType.corporate) {
+            throw new RuntimeException("User is not a corporate");
+        }
+
+        Corporate profile = repo.findById(userId).orElseGet(Corporate::new);
+        profile.setUserId(userId);
+        profile.setCompanyName(corporate.getCompanyName());
+        profile.setGstNumber(corporate.getGstNumber());
+        return repo.save(profile);
     }
 }

@@ -102,6 +102,8 @@ public class UserController {
                         notification.setType("role_assignment");
                         notification.setMessage("Your account role has been updated to " + savedUser.getType().name() + ".");
                         notification.setUserId(savedUser.getUser_id());
+                        notification.setAudienceScope("DIRECT");
+                        notification.setMetadata("{}");
                         notificationRepository.save(notification);
                     }
 

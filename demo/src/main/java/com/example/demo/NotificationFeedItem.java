@@ -1,47 +1,35 @@
 package com.example.demo;
 
-import jakarta.persistence.*;
 import java.sql.Timestamp;
 
-@Entity
-@Table(name = "notifications")
-public class Notification {
-
-    @Id
-    @Column(name = "notification_id", nullable = false)
+public class NotificationFeedItem {
     private String notificationId;
-
-    @Column(name = "type", nullable = false)
-    private String type; // e.g., "info", "warning"
-
-    @Column(name = "message", nullable = false)
+    private String type;
     private String message;
-
-    @Column(name = "sent_at", nullable = false)
-    private Timestamp sentAt = new Timestamp(System.currentTimeMillis());
-
-    @Column(name = "event_id")
+    private Timestamp sentAt;
     private String eventId;
-
-    @Column(name = "user_id")
     private String userId;
-
-    @Column(name = "read_at")
+    private String audienceScope;
+    private String audienceRole;
+    private String metadata;
     private Timestamp readAt;
 
-    @Column(name = "audience_scope", nullable = false)
-    private String audienceScope = "DIRECT";
+    public NotificationFeedItem() {
+    }
 
-    @Column(name = "audience_role")
-    private String audienceRole;
+    public NotificationFeedItem(Notification notification, Timestamp readAt) {
+        this.notificationId = notification.getNotificationId();
+        this.type = notification.getType();
+        this.message = notification.getMessage();
+        this.sentAt = notification.getSentAt();
+        this.eventId = notification.getEventId();
+        this.userId = notification.getUserId();
+        this.audienceScope = notification.getAudienceScope();
+        this.audienceRole = notification.getAudienceRole();
+        this.metadata = notification.getMetadata();
+        this.readAt = readAt;
+    }
 
-    @Column(name = "metadata", nullable = false, columnDefinition = "jsonb")
-    private String metadata = "{}";
-
-    @Column(name = "created_by_user_id")
-    private String createdByUserId;
-
-    // Getters and setters
     public String getNotificationId() { return notificationId; }
     public void setNotificationId(String notificationId) { this.notificationId = notificationId; }
 
@@ -60,9 +48,6 @@ public class Notification {
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
 
-    public Timestamp getReadAt() { return readAt; }
-    public void setReadAt(Timestamp readAt) { this.readAt = readAt; }
-
     public String getAudienceScope() { return audienceScope; }
     public void setAudienceScope(String audienceScope) { this.audienceScope = audienceScope; }
 
@@ -72,6 +57,6 @@ public class Notification {
     public String getMetadata() { return metadata; }
     public void setMetadata(String metadata) { this.metadata = metadata; }
 
-    public String getCreatedByUserId() { return createdByUserId; }
-    public void setCreatedByUserId(String createdByUserId) { this.createdByUserId = createdByUserId; }
+    public Timestamp getReadAt() { return readAt; }
+    public void setReadAt(Timestamp readAt) { this.readAt = readAt; }
 }

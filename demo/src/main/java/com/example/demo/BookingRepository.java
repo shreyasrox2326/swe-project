@@ -2,6 +2,9 @@ package com.example.demo;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
+
 public interface BookingRepository extends JpaRepository<Booking, String> {
-    // You can add custom queries here if needed
+    List<Booking> findByUserId(String userId);
+    List<Booking> findByEventId(String eventId);
 }

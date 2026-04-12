@@ -12,10 +12,12 @@ public class EventController {
 
     private final EventRepository repo;
     private final UserRepository userRepository;
+    private final OrganizerRepository organizerRepository;
 
-    public EventController(EventRepository repo, UserRepository userRepository) {
+    public EventController(EventRepository repo, UserRepository userRepository, OrganizerRepository organizerRepository) {
         this.repo = repo;
         this.userRepository = userRepository;
+        this.organizerRepository = organizerRepository;
     }
 
     // CREATE EVENT
@@ -30,6 +32,9 @@ public class EventController {
         if (user.getType() != UserType.organizer) {
             throw new RuntimeException("User is not an organizer");
         }
+
+        organizerRepository.findById(event.getOrganizerId())
+                .orElseThrow(() -> new RuntimeException("Organizer profile not found"));
 
         // validate time
         if (event.getEndTime().isBefore(event.getStartTime())) {
@@ -53,6 +58,11 @@ public class EventController {
     @GetMapping
     public List<Event> getAll() {
         return repo.findAll();
+    }
+
+    @GetMapping("/organizer/{organizerId}")
+    public List<Event> getByOrganizer(@PathVariable String organizerId) {
+        return repo.findByOrganizerId(organizerId);
     }
 
     // GET BY ID

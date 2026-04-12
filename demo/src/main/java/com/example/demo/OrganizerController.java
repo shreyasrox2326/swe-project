@@ -1,6 +1,7 @@
 package com.example.demo;
 
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -21,6 +22,12 @@ public class OrganizerController {
         return repo.findAll();
     }
 
+    @GetMapping("/{userId}")
+    public Organizer getByUserId(@PathVariable String userId) {
+        return repo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Organizer profile not found"));
+    }
+
     @PostMapping
     public Organizer create(@RequestBody Organizer organizer) {
 
@@ -32,5 +39,20 @@ public class OrganizerController {
     }
 
         return repo.save(organizer);
+    }
+
+    @PutMapping("/{userId}")
+    public Organizer upsert(@PathVariable String userId, @RequestBody Organizer organizer) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getType() != UserType.organizer) {
+            throw new RuntimeException("User is not an organizer");
+        }
+
+        Organizer profile = repo.findById(userId).orElseGet(Organizer::new);
+        profile.setUserId(userId);
+        profile.setOrgName(organizer.getOrgName());
+        return repo.save(profile);
     }
 }
