@@ -1,9 +1,6 @@
 package com.example.demo;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-
 import java.sql.Timestamp;
 
 @Entity
@@ -38,8 +35,7 @@ public class Notification {
     @Column(name = "audience_role")
     private String audienceRole;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "metadata", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "metadata", nullable = false)
     private String metadata = "{}";
 
     @Column(name = "created_by_user_id")
