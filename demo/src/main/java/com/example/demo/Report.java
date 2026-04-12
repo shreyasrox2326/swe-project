@@ -14,7 +14,7 @@ public class Report {
     @Column(name = "generated_date", nullable = false)
     private Timestamp generatedDate = new Timestamp(System.currentTimeMillis());
 
-    @Column(name = "data", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "data", nullable = false)
     private String data; // store JSON as string
 
     @Column(name = "organizer_id", nullable = false)
