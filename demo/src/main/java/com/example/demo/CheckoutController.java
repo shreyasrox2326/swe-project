@@ -13,6 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -83,7 +84,7 @@ public class CheckoutController {
         if (category.getSaleStartDate() != null && category.getSaleStartDate().after(Timestamp.from(Instant.now()))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ticket sales for this category have not started yet.");
         }
-        if (event.getEndTime() != null && !event.getEndTime().after(Timestamp.from(Instant.now()).toLocalDateTime())) {
+        if (event.getEndTime() != null && !event.getEndTime().isAfter(LocalDateTime.now())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This event has already ended.");
         }
 
