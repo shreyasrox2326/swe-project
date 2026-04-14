@@ -1,12 +1,8 @@
 package com.example.demo;
 
-public class CorporatePaymentRequest {
-    private String method;
+public class OtpVerificationRequest {
     private String challengeId;
     private String otpCode;
-
-    public String getMethod() { return method; }
-    public void setMethod(String method) { this.method = method; }
 
     public String getChallengeId() {
         return challengeId;

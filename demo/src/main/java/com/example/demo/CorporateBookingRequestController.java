@@ -10,6 +10,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -27,6 +28,9 @@ public class CorporateBookingRequestController {
     private final PaymentRepository paymentRepo;
     private final TicketRepository ticketRepo;
     private final NotificationRepository notificationRepo;
+    private final UserRepository userRepo;
+    private final OtpChallengeService otpChallengeService;
+    private final EmailDeliveryService emailDeliveryService;
 
     public CorporateBookingRequestController(
             CorporateBookingRequestRepository requestRepo,
@@ -38,7 +42,10 @@ public class CorporateBookingRequestController {
             BookingRepository bookingRepo,
             PaymentRepository paymentRepo,
             TicketRepository ticketRepo,
-            NotificationRepository notificationRepo
+            NotificationRepository notificationRepo,
+            UserRepository userRepo,
+            OtpChallengeService otpChallengeService,
+            EmailDeliveryService emailDeliveryService
     ) {
         this.requestRepo = requestRepo;
         this.itemRepo = itemRepo;
@@ -50,6 +57,9 @@ public class CorporateBookingRequestController {
         this.paymentRepo = paymentRepo;
         this.ticketRepo = ticketRepo;
         this.notificationRepo = notificationRepo;
+        this.userRepo = userRepo;
+        this.otpChallengeService = otpChallengeService;
+        this.emailDeliveryService = emailDeliveryService;
     }
 
     @GetMapping
@@ -305,9 +315,47 @@ public class CorporateBookingRequestController {
         return new CorporateBookingRequestView(request, itemRepo.findByRequestId(requestId));
     }
 
+    @PostMapping("/{requestId}/payment-otp")
+    public OtpChallengeResponse sendPaymentOtp(@PathVariable String requestId, @RequestBody CorporatePaymentRequest payload) {
+        CorporateBookingRequest request = requestRepo.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Corporate booking request not found"));
+
+        if (!"approved_pending_payment".equalsIgnoreCase(request.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This request is not ready for payment");
+        }
+        if (request.getExpiresAt() == null || request.getExpiresAt().before(new Timestamp(System.currentTimeMillis()))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This payment window has expired");
+        }
+
+        User corporateUser = userRepo.findById(request.getCorporateUserId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Corporate user account not found"));
+
+        OtpChallengeResponse response = otpChallengeService.issuePaymentOtp(
+                OtpChallengeService.PURPOSE_CORPORATE_PAYMENT,
+                corporateUser.getEmail(),
+                corporateUser.getUser_id(),
+                requestId,
+                Map.of(
+                        "requestId", requestId,
+                        "method", payload.getMethod() == null || payload.getMethod().isBlank() ? "corporate" : payload.getMethod()
+                )
+        );
+        response.setMessage("Payment OTP sent to your email.");
+        return response;
+    }
+
     @PostMapping("/{requestId}/pay")
     @Transactional
     public CorporateBookingRequestView pay(@PathVariable String requestId, @RequestBody CorporatePaymentRequest payload) {
+        otpChallengeService.verifyAndConsume(
+                payload.getChallengeId(),
+                OtpChallengeService.PURPOSE_CORPORATE_PAYMENT,
+                payload.getOtpCode()
+        );
+        return finalizeCorporatePayment(requestId, payload.getMethod());
+    }
+
+    private CorporateBookingRequestView finalizeCorporatePayment(String requestId, String paymentMethod) {
         CorporateBookingRequest request = requestRepo.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Corporate booking request not found"));
 
@@ -336,7 +384,7 @@ public class CorporateBookingRequestController {
         payment.setPaymentId(UUID.randomUUID().toString());
         payment.setBookingId(booking.getBookingId());
         payment.setAmount(request.getOfferedTotalAmount());
-        payment.setMethod(payload.getMethod() == null || payload.getMethod().isBlank() ? "corporate" : payload.getMethod());
+        payment.setMethod(paymentMethod == null || paymentMethod.isBlank() ? "corporate" : paymentMethod);
         payment.setStatus("success");
         payment.setTransactionTimestamp(new Timestamp(System.currentTimeMillis()));
         paymentRepo.save(payment);
@@ -385,6 +433,18 @@ public class CorporateBookingRequestController {
                 "corporate_payment_success",
                 "A corporate booking payment was completed for " + event.getName() + "."
         );
+
+        User corporateUser = userRepo.findById(request.getCorporateUserId()).orElse(null);
+        if (corporateUser != null) {
+            emailDeliveryService.sendPlainText(
+                    corporateUser.getEmail(),
+                    "Your corporate EMTS tickets for " + event.getName(),
+                    "Corporate payment is complete.\n\nEvent: " + event.getName()
+                            + "\nBooking ID: " + booking.getBookingId()
+                            + "\nTickets issued: " + booking.getQuantity()
+                            + "\n\nOpen the EMTS portal to view ticket QR codes."
+            );
+        }
 
         return new CorporateBookingRequestView(request, itemRepo.findByRequestId(requestId));
     }

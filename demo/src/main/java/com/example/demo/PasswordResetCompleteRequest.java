@@ -1,12 +1,9 @@
 package com.example.demo;
 
-public class CorporatePaymentRequest {
-    private String method;
+public class PasswordResetCompleteRequest {
     private String challengeId;
     private String otpCode;
-
-    public String getMethod() { return method; }
-    public void setMethod(String method) { this.method = method; }
+    private String newPassword;
 
     public String getChallengeId() {
         return challengeId;
@@ -22,5 +19,13 @@ public class CorporatePaymentRequest {
 
     public void setOtpCode(String otpCode) {
         this.otpCode = otpCode;
+    }
+
+    public String getNewPassword() {
+        return newPassword;
+    }
+
+    public void setNewPassword(String newPassword) {
+        this.newPassword = newPassword;
     }
 }
