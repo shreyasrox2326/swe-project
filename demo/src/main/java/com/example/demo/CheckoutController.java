@@ -33,6 +33,7 @@ public class CheckoutController {
     private final NotificationRepository notificationRepository;
     private final OtpChallengeService otpChallengeService;
     private final EmailDeliveryService emailDeliveryService;
+    private final TicketPackageService ticketPackageService;
 
     public CheckoutController(
             UserRepository userRepository,
@@ -43,7 +44,8 @@ public class CheckoutController {
             TicketRepository ticketRepository,
             NotificationRepository notificationRepository,
             OtpChallengeService otpChallengeService,
-            EmailDeliveryService emailDeliveryService
+            EmailDeliveryService emailDeliveryService,
+            TicketPackageService ticketPackageService
     ) {
         this.userRepository = userRepository;
         this.eventRepository = eventRepository;
@@ -54,6 +56,7 @@ public class CheckoutController {
         this.notificationRepository = notificationRepository;
         this.otpChallengeService = otpChallengeService;
         this.emailDeliveryService = emailDeliveryService;
+        this.ticketPackageService = ticketPackageService;
     }
 
     @PostMapping("/start")
@@ -195,14 +198,27 @@ public class CheckoutController {
         notification.setMetadata("{}");
         notificationRepository.save(notification);
 
-        emailDeliveryService.sendPlainText(
-                customer.getEmail(),
-                "Your EMTS tickets for " + event.getName(),
-                "Your booking is confirmed.\n\nEvent: " + event.getName()
-                        + "\nBooking ID: " + booking.getBookingId()
-                        + "\nTickets: " + String.join(", ", ticketIds)
-                        + "\n\nYou can open the EMTS portal to view QR codes."
-        );
+        List<Ticket> issuedTickets = ticketRepository.findByBookingId(booking.getBookingId());
+        Map<String, TicketCategory> categoryMap = Map.of(category.getCategoryId(), category);
+        int zipSizeBytes = ticketPackageService.calculateAttachmentSizeBytes(booking.getBookingId(), issuedTickets, categoryMap);
+        String emailBody = "Your booking is confirmed.\n\nEvent: " + event.getName()
+                + "\nBooking ID: " + booking.getBookingId()
+                + "\nTickets: " + String.join(", ", ticketIds);
+
+        if (zipSizeBytes <= 20 * 1024 * 1024) {
+            emailDeliveryService.sendPlainText(
+                    customer.getEmail(),
+                    "Your EMTS tickets for " + event.getName(),
+                    emailBody + "\n\nYour ticket QR ZIP is attached.",
+                    List.of(ticketPackageService.buildTicketZipAttachment(booking.getBookingId(), issuedTickets, categoryMap))
+            );
+        } else {
+            emailDeliveryService.sendPlainText(
+                    customer.getEmail(),
+                    "Your EMTS tickets for " + event.getName(),
+                    emailBody + "\n\nYour ticket ZIP was too large to email. Please open the EMTS portal to download your QR files."
+            );
+        }
 
         CheckoutConfirmResponse response = new CheckoutConfirmResponse();
         response.setBookingId(booking.getBookingId());

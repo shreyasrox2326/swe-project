@@ -13,6 +13,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -37,11 +38,16 @@ public class EmailDeliveryService {
     }
 
     public void sendPlainText(String to, String subject, String body) {
+        sendPlainText(to, subject, body, List.of());
+    }
+
+    public void sendPlainText(String to, String subject, String body, List<MailAttachment> attachments) {
         try {
             String payload = objectMapper.writeValueAsString(Map.of(
                     "to", to,
                     "subject", subject,
-                    "text", body
+                    "text", body,
+                    "attachments", attachments
             ));
 
             HttpRequest request = HttpRequest.newBuilder()

@@ -31,6 +31,7 @@ public class CorporateBookingRequestController {
     private final UserRepository userRepo;
     private final OtpChallengeService otpChallengeService;
     private final EmailDeliveryService emailDeliveryService;
+    private final TicketPackageService ticketPackageService;
 
     public CorporateBookingRequestController(
             CorporateBookingRequestRepository requestRepo,
@@ -45,7 +46,8 @@ public class CorporateBookingRequestController {
             NotificationRepository notificationRepo,
             UserRepository userRepo,
             OtpChallengeService otpChallengeService,
-            EmailDeliveryService emailDeliveryService
+            EmailDeliveryService emailDeliveryService,
+            TicketPackageService ticketPackageService
     ) {
         this.requestRepo = requestRepo;
         this.itemRepo = itemRepo;
@@ -60,6 +62,7 @@ public class CorporateBookingRequestController {
         this.userRepo = userRepo;
         this.otpChallengeService = otpChallengeService;
         this.emailDeliveryService = emailDeliveryService;
+        this.ticketPackageService = ticketPackageService;
     }
 
     @GetMapping
@@ -436,14 +439,33 @@ public class CorporateBookingRequestController {
 
         User corporateUser = userRepo.findById(request.getCorporateUserId()).orElse(null);
         if (corporateUser != null) {
-            emailDeliveryService.sendPlainText(
-                    corporateUser.getEmail(),
-                    "Your corporate EMTS tickets for " + event.getName(),
-                    "Corporate payment is complete.\n\nEvent: " + event.getName()
-                            + "\nBooking ID: " + booking.getBookingId()
-                            + "\nTickets issued: " + booking.getQuantity()
-                            + "\n\nOpen the EMTS portal to view ticket QR codes."
-            );
+            List<Ticket> issuedTickets = ticketRepo.findByBookingId(booking.getBookingId());
+            Map<String, TicketCategory> categoryMap = new java.util.HashMap<>();
+            for (CorporateBookingRequestItem item : items) {
+                TicketCategory category = categoryRepo.findById(item.getCategoryId()).orElse(null);
+                if (category != null) {
+                    categoryMap.put(category.getCategoryId(), category);
+                }
+            }
+            int zipSizeBytes = ticketPackageService.calculateAttachmentSizeBytes(booking.getBookingId(), issuedTickets, categoryMap);
+            String emailBody = "Corporate payment is complete.\n\nEvent: " + event.getName()
+                    + "\nBooking ID: " + booking.getBookingId()
+                    + "\nTickets issued: " + booking.getQuantity();
+
+            if (zipSizeBytes <= 20 * 1024 * 1024) {
+                emailDeliveryService.sendPlainText(
+                        corporateUser.getEmail(),
+                        "Your corporate EMTS tickets for " + event.getName(),
+                        emailBody + "\n\nYour ticket QR ZIP is attached.",
+                        List.of(ticketPackageService.buildTicketZipAttachment(booking.getBookingId(), issuedTickets, categoryMap))
+                );
+            } else {
+                emailDeliveryService.sendPlainText(
+                        corporateUser.getEmail(),
+                        "Your corporate EMTS tickets for " + event.getName(),
+                        emailBody + "\n\nYour ticket ZIP was too large to email. Please open the EMTS portal to download your QR files."
+                );
+            }
         }
 
         return new CorporateBookingRequestView(request, itemRepo.findByRequestId(requestId));
