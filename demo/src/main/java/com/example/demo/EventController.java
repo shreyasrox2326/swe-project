@@ -67,6 +67,11 @@ public class EventController {
         return repo.findByOrganizerId(organizerId);
     }
 
+    @GetMapping("/published")
+    public List<Event> getPublished() {
+        return repo.findByStatusIgnoreCase("published");
+    }
+
     // GET BY ID
     @GetMapping("/{id}")
     public Event getById(@PathVariable String id) {

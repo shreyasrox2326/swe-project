@@ -51,6 +51,11 @@ public class TicketCategoryController {
                 .orElseThrow(() -> new RuntimeException("Category not found"));
     }
 
+    @GetMapping("/event/{eventId}")
+    public List<TicketCategory> getByEvent(@PathVariable String eventId) {
+        return categoryRepo.findByEventId(eventId);
+    }
+
     // DELETE CATEGORY
     @DeleteMapping("/{id}")
     public void delete(@PathVariable String id) {

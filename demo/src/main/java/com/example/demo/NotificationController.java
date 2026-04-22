@@ -87,20 +87,36 @@ public class NotificationController {
         notificationRepo.findByAudienceScope("GLOBAL").forEach(notification -> visible.put(notification.getNotificationId(), notification));
         notificationRepo.findByAudienceScopeAndAudienceRole("ROLE", user.getType().name()).forEach(notification -> visible.put(notification.getNotificationId(), notification));
 
-        for (String eventId : resolveRelevantEventIds(user)) {
-            notificationRepo.findByAudienceScopeAndEventId("EVENT", eventId)
+        Set<String> relevantEventIds = resolveRelevantEventIds(user);
+        if (!relevantEventIds.isEmpty()) {
+            notificationRepo.findByAudienceScopeAndEventIdIn("EVENT", new ArrayList<>(relevantEventIds))
                     .forEach(notification -> visible.put(notification.getNotificationId(), notification));
+        }
+
+        List<String> notificationIds = new ArrayList<>(visible.keySet());
+        Map<String, NotificationReceipt> receiptsByNotificationId = new HashMap<>();
+        if (!notificationIds.isEmpty()) {
+            receiptRepo.findByUserIdAndNotificationIdIn(userId, notificationIds)
+                    .forEach(receipt -> receiptsByNotificationId.put(receipt.getNotificationId(), receipt));
         }
 
         List<NotificationFeedItem> feed = new ArrayList<>();
         for (Notification notification : visible.values()) {
-            Timestamp readAt = receiptRepo.findByNotificationIdAndUserId(notification.getNotificationId(), userId)
-                    .map(NotificationReceipt::getReadAt)
-                    .orElseGet(() -> notification.getUserId() != null && notification.getUserId().equals(userId) ? notification.getReadAt() : null);
+            NotificationReceipt receipt = receiptsByNotificationId.get(notification.getNotificationId());
+            Timestamp readAt = receipt != null
+                    ? receipt.getReadAt()
+                    : notification.getUserId() != null && notification.getUserId().equals(userId) ? notification.getReadAt() : null;
             feed.add(new NotificationFeedItem(notification, readAt));
         }
         feed.sort(Comparator.comparing(NotificationFeedItem::getSentAt, Comparator.nullsLast(Timestamp::compareTo)).reversed());
         return feed;
+    }
+
+    @GetMapping("/visible/{userId}/count")
+    public Map<String, Integer> getVisibleNotificationCount(@PathVariable String userId) {
+        List<NotificationFeedItem> visibleNotifications = getVisibleNotifications(userId);
+        int unread = (int) visibleNotifications.stream().filter(item -> item.getReadAt() == null).count();
+        return Map.of("total", visibleNotifications.size(), "unread", unread);
     }
 
     @PatchMapping("/{notificationId}/read")
@@ -125,15 +141,43 @@ public class NotificationController {
         Timestamp readAt = new Timestamp(System.currentTimeMillis());
         List<NotificationFeedItem> visibleNotifications = getVisibleNotifications(userId);
 
+        List<String> notificationIds = visibleNotifications.stream()
+                .map(NotificationFeedItem::getNotificationId)
+                .toList();
+        Map<String, Notification> notificationsById = new HashMap<>();
+        notificationRepo.findAllById(notificationIds)
+                .forEach(notification -> notificationsById.put(notification.getNotificationId(), notification));
+
+        List<NotificationReceipt> existingReceipts = receiptRepo.findByUserIdAndNotificationIdIn(userId, notificationIds);
+        Map<String, NotificationReceipt> receiptsByNotificationId = new HashMap<>();
+        existingReceipts.forEach(receipt -> receiptsByNotificationId.put(receipt.getNotificationId(), receipt));
+
+        List<Notification> directNotificationsToSave = new ArrayList<>();
+        List<NotificationReceipt> receiptsToSave = new ArrayList<>();
         for (NotificationFeedItem item : visibleNotifications) {
-            Notification notification = notificationRepo.findById(item.getNotificationId())
-                    .orElseThrow(() -> new RuntimeException("Notification not found"));
+            Notification notification = notificationsById.get(item.getNotificationId());
+            if (notification == null) {
+                continue;
+            }
             if (notification.getUserId() != null && notification.getUserId().equals(userId)) {
                 notification.setReadAt(readAt);
-                notificationRepo.save(notification);
+                directNotificationsToSave.add(notification);
             }
-            ensureReceipt(notification.getNotificationId(), userId, readAt);
+            NotificationReceipt receipt = receiptsByNotificationId.getOrDefault(notification.getNotificationId(), new NotificationReceipt());
+            receipt.setNotificationId(notification.getNotificationId());
+            receipt.setUserId(userId);
+            if (receipt.getDeliveredAt() == null) {
+                receipt.setDeliveredAt(readAt);
+            }
+            receipt.setReadAt(readAt);
+            receiptsToSave.add(receipt);
             item.setReadAt(readAt);
+        }
+        if (!directNotificationsToSave.isEmpty()) {
+            notificationRepo.saveAll(directNotificationsToSave);
+        }
+        if (!receiptsToSave.isEmpty()) {
+            receiptRepo.saveAll(receiptsToSave);
         }
 
         return visibleNotifications;

@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface EventRepository extends JpaRepository<Event, String> {
     List<Event> findByOrganizerId(String organizerId);
+    List<Event> findByStatusIgnoreCase(String status);
 }

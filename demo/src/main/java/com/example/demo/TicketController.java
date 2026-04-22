@@ -60,6 +60,29 @@ public class TicketController {
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
     }
 
+    @GetMapping("/booking/{bookingId}")
+    public List<Ticket> getByBooking(@PathVariable String bookingId) {
+        return ticketRepo.findByBookingId(bookingId);
+    }
+
+    @GetMapping("/event/{eventId}")
+    public List<Ticket> getByEvent(@PathVariable String eventId) {
+        List<String> bookingIds = bookingRepo.findByEventId(eventId)
+                .stream()
+                .map(Booking::getBookingId)
+                .toList();
+        return bookingIds.isEmpty() ? List.of() : ticketRepo.findByBookingIdIn(bookingIds);
+    }
+
+    @GetMapping("/user/{userId}")
+    public List<Ticket> getByUser(@PathVariable String userId) {
+        List<String> bookingIds = bookingRepo.findByUserId(userId)
+                .stream()
+                .map(Booking::getBookingId)
+                .toList();
+        return bookingIds.isEmpty() ? List.of() : ticketRepo.findByBookingIdIn(bookingIds);
+    }
+
     // UPDATE STATUS
     @PatchMapping("/{id}/status")
     public Ticket updateStatus(@PathVariable String id, @RequestParam TicketStatus status) {

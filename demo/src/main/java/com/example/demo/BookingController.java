@@ -57,6 +57,16 @@ public class BookingController {
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
     }
 
+    @GetMapping("/user/{userId}")
+    public List<Booking> getByUser(@PathVariable String userId) {
+        return bookingRepo.findByUserId(userId);
+    }
+
+    @GetMapping("/event/{eventId}")
+    public List<Booking> getByEvent(@PathVariable String eventId) {
+        return bookingRepo.findByEventId(eventId);
+    }
+
     // DELETE BOOKING
     @DeleteMapping("/{id}")
     public void delete(@PathVariable String id) {

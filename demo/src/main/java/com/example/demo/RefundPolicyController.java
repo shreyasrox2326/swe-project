@@ -33,6 +33,12 @@ public class RefundPolicyController {
                 .orElseThrow(() -> new RuntimeException("Refund policy not found"));
     }
 
+    @GetMapping("/event/{eventId}")
+    public RefundPolicy getByEvent(@PathVariable String eventId) {
+        return repo.findByEventId(eventId)
+                .orElseThrow(() -> new RuntimeException("Refund policy not found"));
+    }
+
     // DELETE policy
     @DeleteMapping("/{id}")
     public void delete(@PathVariable String id) {

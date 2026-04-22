@@ -1,6 +1,8 @@
 package com.example.demo;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +29,18 @@ public class UserController {
     @GetMapping
     public List<User> getAllUsers() {
         return userRepository.findAll();
+    }
+
+    @GetMapping("/search")
+    public Page<User> searchUsers(
+            @RequestParam(required = false, defaultValue = "") String q,
+            @RequestParam(required = false) UserType role,
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "25") int size
+    ) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        return userRepository.searchUsers(q == null ? "" : q.trim(), role, PageRequest.of(safePage, safeSize));
     }
 
     // GET by ID

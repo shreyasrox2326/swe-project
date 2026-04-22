@@ -9,4 +9,6 @@ import java.util.List;
 public interface TicketRepository extends JpaRepository<Ticket, String> {
     Ticket findByQrCode(String qrCode);
     List<Ticket> findByBookingId(String bookingId);
+    List<Ticket> findByBookingIdIn(List<String> bookingIds);
+    List<Ticket> findByCategoryIdIn(List<String> categoryIds);
 }

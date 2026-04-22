@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface NotificationReceiptRepository extends JpaRepository<NotificationReceipt, NotificationReceiptId> {
     Optional<NotificationReceipt> findByNotificationIdAndUserId(String notificationId, String userId);
     List<NotificationReceipt> findByUserId(String userId);
+    List<NotificationReceipt> findByUserIdAndNotificationIdIn(String userId, List<String> notificationIds);
 }

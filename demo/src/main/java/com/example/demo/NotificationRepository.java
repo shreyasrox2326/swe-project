@@ -9,4 +9,5 @@ public interface NotificationRepository extends JpaRepository<Notification, Stri
     List<Notification> findByAudienceScope(String audienceScope);
     List<Notification> findByAudienceScopeAndAudienceRole(String audienceScope, String audienceRole);
     List<Notification> findByAudienceScopeAndEventId(String audienceScope, String eventId);
+    List<Notification> findByAudienceScopeAndEventIdIn(String audienceScope, List<String> eventIds);
 }
