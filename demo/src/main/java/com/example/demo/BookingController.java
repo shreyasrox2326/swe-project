@@ -11,11 +11,13 @@ public class BookingController {
     private final BookingRepository bookingRepo;
     private final UserRepository userRepo;
     private final EventRepository eventRepo;
+    private final BulkActionService bulkActionService;
 
-    public BookingController(BookingRepository bookingRepo, UserRepository userRepo, EventRepository eventRepo) {
+    public BookingController(BookingRepository bookingRepo, UserRepository userRepo, EventRepository eventRepo, BulkActionService bulkActionService) {
         this.bookingRepo = bookingRepo;
         this.userRepo = userRepo;
         this.eventRepo = eventRepo;
+        this.bulkActionService = bulkActionService;
     }
 
     // CREATE BOOKING
@@ -59,5 +61,10 @@ public class BookingController {
     @DeleteMapping("/{id}")
     public void delete(@PathVariable String id) {
         bookingRepo.deleteById(id);
+    }
+
+    @PostMapping("/{id}/cancel")
+    public BulkActionResult cancel(@PathVariable String id) {
+        return bulkActionService.cancelBooking(id);
     }
 }

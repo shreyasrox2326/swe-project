@@ -11,13 +11,16 @@ public class TicketController {
     private final TicketRepository ticketRepo;
     private final BookingRepository bookingRepo;
     private final TicketCategoryRepository categoryRepo;
+    private final BulkActionService bulkActionService;
 
     public TicketController(TicketRepository ticketRepo,
                             BookingRepository bookingRepo,
-                            TicketCategoryRepository categoryRepo) {
+                            TicketCategoryRepository categoryRepo,
+                            BulkActionService bulkActionService) {
         this.ticketRepo = ticketRepo;
         this.bookingRepo = bookingRepo;
         this.categoryRepo = categoryRepo;
+        this.bulkActionService = bulkActionService;
     }
 
     // CREATE TICKET
@@ -64,6 +67,11 @@ public class TicketController {
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
         ticket.setStatus(status);
         return ticketRepo.save(ticket);
+    }
+
+    @PostMapping("/{id}/cancel")
+    public BulkActionResult cancel(@PathVariable String id) {
+        return bulkActionService.cancelTicket(id);
     }
 
     // DELETE TICKET

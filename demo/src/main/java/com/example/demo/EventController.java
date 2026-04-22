@@ -13,11 +13,13 @@ public class EventController {
     private final EventRepository repo;
     private final UserRepository userRepository;
     private final OrganizerRepository organizerRepository;
+    private final BulkActionService bulkActionService;
 
-    public EventController(EventRepository repo, UserRepository userRepository, OrganizerRepository organizerRepository) {
+    public EventController(EventRepository repo, UserRepository userRepository, OrganizerRepository organizerRepository, BulkActionService bulkActionService) {
         this.repo = repo;
         this.userRepository = userRepository;
         this.organizerRepository = organizerRepository;
+        this.bulkActionService = bulkActionService;
     }
 
     // CREATE EVENT
@@ -72,13 +74,14 @@ public class EventController {
                 .orElseThrow(() -> new RuntimeException("Event not found"));
     }
 
+    @PostMapping("/{id}/cancel")
+    public BulkActionResult cancel(@PathVariable String id) {
+        return bulkActionService.cancelEvent(id, "cancelled");
+    }
+
     // DELETE
     @DeleteMapping("/{id}")
-    public Event delete(@PathVariable String id) {
-        Event event = repo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Event not found"));
-
-        event.setStatus("deleted");
-        return repo.save(event);
+    public BulkActionResult delete(@PathVariable String id) {
+        return bulkActionService.cancelEvent(id, "deleted");
     }
 }
